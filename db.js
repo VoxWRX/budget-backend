@@ -1,13 +1,10 @@
 const { Pool } = require("pg");
 require("dotenv").config();
 
-// Configuration de la connexion
 const dbConfig = process.env.DATABASE_URL
   ? {
       connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false, // Nécessaire pour Neon/Render en production
-      },
+      ssl: { rejectUnauthorized: false }, // INDISPENSABLE POUR NEON
     }
   : {
       user: process.env.DB_USER,
