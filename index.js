@@ -8,7 +8,10 @@ const nodemailer = require("nodemailer");
 const crypto = require("node:crypto"); // Natif dans Node.js, pas d'install nécessaire
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  service: "gmail", // Garde ça, c'est pratique
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // Utilise SSL
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -24,10 +27,10 @@ const PORT = process.env.PORT || 3000;
 const authenticateToken = require("./authMiddleware");
 
 // On définit la liste des domaines autorisés
-const allowedOrigins = [
-  "http://localhost:5173", // Pour que ça marche encore sur ton PC
-  "https://budget-frontend-seven.vercel.app", // Ton site en production (Vercel)
-];
+const allowedOrigins = new Set([
+  "http://localhost:5173",
+  "https://budget-frontend-seven.vercel.app",
+]);
 
 app.use(express.json());
 app.use(
@@ -36,14 +39,17 @@ app.use(
       // allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.indexOf(origin) === -1) {
-        var msg =
+      // CORRECTION S7765 : Utilisation de !.includes() au lieu de .indexOf() === -1
+      // C'est plus lisible : "Si les origines autorisées n'incluent pas l'origine actuelle..."
+      if (!allowedOrigins.includes(origin)) {
+        // CORRECTION S3504 : Utilisation de 'const' au lieu de 'var'
+        const msg =
           "The CORS policy for this site does not allow access from the specified Origin.";
         return callback(new Error(msg), false);
       }
       return callback(null, true);
     },
-    credentials: true, // Important si on utilise des cookies/sessions (moins critique avec JWT mais bonne pratique)
+    credentials: true,
   })
 );
 
