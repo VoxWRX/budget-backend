@@ -27,31 +27,9 @@ const PORT = process.env.PORT || 3000;
 const authenticateToken = require("./authMiddleware");
 
 // On définit la liste des domaines autorisés
-const allowedOrigins = new Set([
-  "http://localhost:5173",
-  "https://budget-frontend-seven.vercel.app",
-]);
 
 app.use(express.json());
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-
-      // CORRECTION S7765 : Utilisation de !.includes() au lieu de .indexOf() === -1
-      // C'est plus lisible : "Si les origines autorisées n'incluent pas l'origine actuelle..."
-      if (!allowedOrigins.includes(origin)) {
-        // CORRECTION S3504 : Utilisation de 'const' au lieu de 'var'
-        const msg =
-          "The CORS policy for this site does not allow access from the specified Origin.";
-        return callback(new Error(msg), false);
-      }
-      return callback(null, true);
-    },
-    credentials: true,
-  })
-);
+app.use(cors());
 
 // Fonction pour enregistrer un changement dans l'historique
 // Note: on passe le 'client' pour que ça fasse partie de la transaction SQL
