@@ -23,11 +23,29 @@ const PORT = process.env.PORT || 3000;
 // 👇 1. Importez le middleware que vous venez de créer
 const authenticateToken = require("./authMiddleware");
 
-// Middleware : C'est une étape cruciale !
-// Elle permet à notre serveur Express de comprendre le format JSON
-// que nous allons lui envoyer depuis notre interface (ou Postman).
+// On définit la liste des domaines autorisés
+const allowedOrigins = [
+  "http://localhost:5173", // Pour que ça marche encore sur ton PC
+  "https://budget-frontend-seven.vercel.app", // Ton site en production (Vercel)
+];
+
 app.use(express.json());
-app.use(cors()); // <-- Utiliser cors. C'est tout !
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) === -1) {
+        var msg =
+          "The CORS policy for this site does not allow access from the specified Origin.";
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    credentials: true, // Important si on utilise des cookies/sessions (moins critique avec JWT mais bonne pratique)
+  })
+);
 
 // Fonction pour enregistrer un changement dans l'historique
 // Note: on passe le 'client' pour que ça fasse partie de la transaction SQL
@@ -976,11 +994,9 @@ app.put("/api/users/profile", auth, async (req, res) => {
     // Gestion spécifique de l'erreur "Doublon" pour afficher un message clair
     if (err.code === "23505") {
       // Code erreur PostgreSQL pour contrainte unique
-      return res
-        .status(400)
-        .json({
-          error: "Ce numéro de téléphone est déjà utilisé par un autre compte.",
-        });
+      return res.status(400).json({
+        error: "Ce numéro de téléphone est déjà utilisé par un autre compte.",
+      });
     }
     res.status(500).json({ error: "Erreur lors de la mise à jour du profil." });
   }
