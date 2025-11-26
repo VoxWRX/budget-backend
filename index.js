@@ -4,19 +4,10 @@ const bcrypt = require("bcryptjs"); // Importer bcrypt pour le hachage
 const jwt = require("jsonwebtoken"); // Importer la bibliothèque JWT
 const auth = require("./middleware/auth"); // <-- IMPORTER NOTRE GARDE
 const cors = require("cors"); // <-- Importer cors
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const crypto = require("node:crypto"); // Natif dans Node.js, pas d'install nécessaire
 
-const transporter = nodemailer.createTransport({
-  service: "gmail", // Garde ça, c'est pratique
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // Utilise SSL
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 require("dotenv").config();
 
@@ -98,27 +89,28 @@ app.post("/api/register", async (req, res) => {
     );
 
     // ENVOYER L'EMAIL
+    // ENVOYER L'EMAIL AVEC RESEND
     const verifyLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Vérifiez votre compte Budget Planner",
-      html: `
-            <h1>Bienvenue ${name} !</h1>
-            <p>Merci de vous être inscrit. Pour activer votre compte, veuillez cliquer sur le lien ci-dessous :</p>
-            <a href="${verifyLink}">Confirmer mon email</a>
-            <p>Ou copiez ce lien : ${verifyLink}</p>
-        `,
-    };
+    try {
+      await resend.emails.send({
+        from: "onboarding@resend.dev", // Domaine de test gratuit fourni par Resend
+        to: email, // L'email de l'utilisateur
+        subject: "Vérifiez votre compte Budget Planner",
+        html: `
+                <h1>Bienvenue ${name} !</h1>
+                <p>Cliquez ci-dessous pour valider votre compte :</p>
+                <a href="${verifyLink}">Confirmer mon email</a>
+            `,
+      });
+    } catch (emailError) {
+      console.error("Erreur Resend:", emailError);
+      // On ne bloque pas l'inscription si l'email échoue, mais on loggue l'erreur
+    }
 
-    await transporter.sendMail(mailOptions);
-
-    // Réponse différente : on ne connecte pas l'utilisateur tout de suite
-    res.status(201).json({
-      message:
-        "Inscription réussie. Veuillez vérifier vos emails pour activer votre compte.",
-    });
+    res
+      .status(201)
+      .json({ message: "Inscription réussie. Vérifiez vos emails." });
   } catch (err) {
     console.error(err.message);
     // CORRECTION : Utilisez .json() au lieu de .send()
@@ -413,20 +405,15 @@ app.post("/api/budgets/:id/invite", auth, async (req, res) => {
     // Le lien renverra vers une page React "/invitations" (à créer)
     const inviteLink = `${process.env.FRONTEND_URL}/invitations?token=${token}`;
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    await resend.emails.send({
+      from: "onboarding@resend.dev",
       to: email,
-      subject: `Invitation à rejoindre le budget "${budgetName}"`,
+      subject: `Invitation au budget "${budgetName}"`,
       html: `
-                <h2>Vous avez été invité !</h2>
-                <p>L'utilisateur avec l'ID ${senderId} vous invite à collaborer sur le budget <strong>${budgetName}</strong>.</p>
-                <p>Cliquez ci-dessous pour accepter ou refuser :</p>
-                <a href="${inviteLink}" style="padding: 10px 20px; background-color: #4361ee; color: white; text-decoration: none; border-radius: 5px;">Voir l'invitation</a>
-                <p><small>Si vous n'avez pas de compte, vous devrez en créer un avec cet email (${email}) d'abord.</small></p>
+                <p>On vous invite à rejoindre le budget <strong>${budgetName}</strong>.</p>
+                <a href="${inviteLink}">Voir l'invitation</a>
             `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
 
     await client.query("COMMIT");
     res.json({ message: `Invitation envoyée à ${email}` });
