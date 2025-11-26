@@ -94,7 +94,7 @@ app.post("/api/register", async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: "onboarding@resend.dev", // Domaine de test gratuit fourni par Resend
+        from: "Budget Planner <no-replay@bplan.space>", // Domaine de test gratuit fourni par Resend
         to: email, // L'email de l'utilisateur
         subject: "Vérifiez votre compte Budget Planner",
         html: `
@@ -406,7 +406,7 @@ app.post("/api/budgets/:id/invite", auth, async (req, res) => {
     const inviteLink = `${process.env.FRONTEND_URL}/invitations?token=${token}`;
 
     await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: "Budget Planner <no-replay@bplan.space>",
       to: email,
       subject: `Invitation au budget "${budgetName}"`,
       html: `
