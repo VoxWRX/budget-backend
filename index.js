@@ -6,6 +6,9 @@ const auth = require("./middleware/auth"); // <-- IMPORTER NOTRE GARDE
 const cors = require("cors"); // <-- Importer cors
 const { Resend } = require("resend");
 const crypto = require("node:crypto"); // Natif dans Node.js, pas d'install nécessaire
+const multer = require("multer"); // NOUVEAU
+const cloudinary = require("cloudinary").v2; // NOUVEAU
+const fs = require("node:fs"); // Natif Node.js
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -13,7 +16,7 @@ require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
+const upload = multer({ dest: "uploads/" });
 // 👇 1. Importez le middleware que vous venez de créer
 const authenticateToken = require("./authMiddleware");
 
@@ -21,6 +24,11 @@ const authenticateToken = require("./authMiddleware");
 
 app.use(express.json());
 app.use(cors());
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // Fonction pour enregistrer un changement dans l'historique
 // Note: on passe le 'client' pour que ça fasse partie de la transaction SQL
@@ -930,48 +938,66 @@ app.put("/api/categories/:id", auth, async (req, res) => {
   }
 });
 
-// PUT /api/users/profile - Mettre à jour le profil
-// PUT /api/users/profile - Mettre à jour le profil
-app.put("/api/users/profile", auth, async (req, res) => {
-  const userId = req.user.id;
-  const { name, phone_number, avatar_url } = req.body;
+// On ajoute le middleware 'upload.single' pour traiter le fichier
+app.put(
+  "/api/users/profile",
+  auth,
+  upload.single("avatar"),
+  async (req, res) => {
+    const userId = req.user.id;
+    // Attention : avec FormData, les champs texte sont dans req.body
+    const { name, phone_number } = req.body;
+    let avatarUrl = req.body.avatar_url; // L'ancienne URL si pas de nouvelle image
 
-  try {
-    // CORRECTION : Transformer les chaînes vides ("") en NULL
-    // Si le champ est vide ou contient juste des espaces, on envoie null à la BDD
-    const phoneToSave =
-      phone_number && phone_number.trim() !== "" ? phone_number : null;
-    const avatarToSave =
-      avatar_url && avatar_url.trim() !== "" ? avatar_url : null;
+    const client = await db.pool.connect();
 
-    const query = `
+    try {
+      // 1. Si un fichier a été envoyé, on l'upload sur Cloudinary
+      if (req.file) {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "budget_planner_avatars", // Dossier dans Cloudinary
+          width: 300, // On redimensionne pour optimiser
+          height: 300,
+          crop: "fill",
+        });
+
+        avatarUrl = result.secure_url; // On récupère la nouvelle URL Cloudinary
+
+        // Nettoyage : On supprime le fichier temporaire du serveur
+        fs.unlinkSync(req.file.path);
+      }
+
+      const phoneToSave =
+        phone_number && phone_number.trim() !== "" ? phone_number : null;
+
+      // 2. Mise à jour en base de données
+      const query = `
             UPDATE users 
             SET name = $1, phone_number = $2, avatar_url = $3
             WHERE id = $4
             RETURNING id, name, email, phone_number, avatar_url, currency
         `;
 
-    // On utilise nos nouvelles variables '...ToSave'
-    const result = await db.query(query, [
-      name,
-      phoneToSave,
-      avatarToSave,
-      userId,
-    ]);
+      const result = await client.query(query, [
+        name,
+        phoneToSave,
+        avatarUrl,
+        userId,
+      ]);
 
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    // Gestion spécifique de l'erreur "Doublon" pour afficher un message clair
-    if (err.code === "23505") {
-      // Code erreur PostgreSQL pour contrainte unique
-      return res.status(400).json({
-        error: "Ce numéro de téléphone est déjà utilisé par un autre compte.",
-      });
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error(err);
+      if (req.file && fs.existsSync(req.file.path))
+        fs.unlinkSync(req.file.path); // Nettoyage en cas d'erreur
+      res
+        .status(500)
+        .json({ error: "Erreur lors de la mise à jour du profil." });
+    } finally {
+      client.release();
     }
-    res.status(500).json({ error: "Erreur lors de la mise à jour du profil." });
   }
-});
+);
 
 // GET /api/invitations/check/:token - Vérifier une invitation via son lien
 app.get("/api/invitations/check/:token", async (req, res) => {
