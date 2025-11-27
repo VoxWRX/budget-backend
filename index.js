@@ -973,6 +973,35 @@ app.put("/api/users/profile", auth, async (req, res) => {
   }
 });
 
+// GET /api/invitations/check/:token - Vérifier une invitation via son lien
+app.get("/api/invitations/check/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const query = `
+            SELECT i.*, b.name as budget_name, u.name as sender_name 
+            FROM invitations i
+            JOIN budgets b ON i.budget_id = b.id
+            JOIN users u ON i.sender_id = u.id
+            WHERE i.token = $1
+        `;
+
+    const result = await db.query(query, [token]);
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "Invitation introuvable ou expirée." });
+    }
+
+    // On renvoie les infos de l'invitation (sans donner d'accès sensible)
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 // Démarrer le serveur
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
