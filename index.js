@@ -614,7 +614,7 @@ app.get("/api/budgets/:budgetId/categories", auth, async (req, res) => {
 
     // 3. Récupérer les catégories
     const categories = await db.query(
-      "SELECT * FROM categories WHERE budget_id = $1",
+      "SELECT * FROM categories WHERE budget_id = $1 AND deleted_at IS NULL",
       [budgetId]
     );
 
@@ -712,10 +712,10 @@ app.get("/api/budgets/:budgetId/transactions", auth, async (req, res) => {
     // On trie par date (les plus récentes en premier)
     const transactions = await db.query(
       `SELECT t.*, u.name as user_name 
-             FROM transactions t
-             JOIN users u ON t.user_id = u.id
-             WHERE t.budget_id = $1 
-             ORDER BY t.transaction_date DESC, t.id DESC`,
+        FROM transactions t
+        JOIN users u ON t.user_id = u.id
+        WHERE t.budget_id = $1 AND t.deleted_at IS NULL
+        ORDER BY t.transaction_date DESC, t.id DESC`,
       [budgetId]
     );
 
@@ -1032,6 +1032,97 @@ app.get("/api/invitations/check/:token", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+// --- SOFT DELETE TRANSACTION ---
+app.delete("/api/transactions/:id", auth, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  const client = await db.pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // 1. Récupérer la transaction pour vérifier et avoir les infos pour l'historique
+    const txRes = await client.query(
+      "SELECT * FROM transactions WHERE id = $1",
+      [id]
+    );
+    if (txRes.rows.length === 0)
+      return res.status(404).json({ error: "Introuvable" });
+    const tx = txRes.rows[0];
+
+    // 2. Soft Delete (Mise à jour de la date)
+    await client.query(
+      "UPDATE transactions SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1",
+      [id]
+    );
+
+    // 3. Historique
+    await logHistory(
+      client,
+      tx.budget_id,
+      userId,
+      "TRANSACTION",
+      id,
+      "DELETE",
+      `Suppression transaction: ${tx.description} (${tx.amount})`
+    );
+
+    await client.query("COMMIT");
+    res.json({ message: "Transaction supprimée" });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  } finally {
+    client.release();
+  }
+});
+
+// --- SOFT DELETE CATÉGORIE ---
+app.delete("/api/categories/:id", auth, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  const client = await db.pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const catRes = await client.query(
+      "SELECT * FROM categories WHERE id = $1",
+      [id]
+    );
+    if (catRes.rows.length === 0)
+      return res.status(404).json({ error: "Introuvable" });
+    const cat = catRes.rows[0];
+
+    // Soft Delete
+    await client.query(
+      "UPDATE categories SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1",
+      [id]
+    );
+
+    // Historique
+    await logHistory(
+      client,
+      cat.budget_id,
+      userId,
+      "CATEGORY",
+      id,
+      "DELETE",
+      `Suppression catégorie: ${cat.name}`
+    );
+
+    await client.query("COMMIT");
+    res.json({ message: "Catégorie supprimée" });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  } finally {
+    client.release();
   }
 });
 
