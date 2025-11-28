@@ -16,7 +16,10 @@ require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const upload = multer({ dest: "uploads/" });
+const upload = multer({
+  dest: "uploads/",
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 // 👇 1. Importez le middleware que vous venez de créer
 const authenticateToken = require("./authMiddleware");
 
