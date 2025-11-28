@@ -184,6 +184,10 @@ app.post("/api/login", async (req, res) => {
             id: user.id,
             name: user.name,
             email: user.email,
+            phone_number: user.phone_number, // <-- Important
+            avatar_url: user.avatar_url, // <-- Important
+            currency: user.currency,
+            is_verified: user.is_verified,
           },
         });
       }
