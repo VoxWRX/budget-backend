@@ -1,8 +1,6 @@
-# 💰 Budget Planner (BPlan)
+# 💰 Budget Planner Backend (BPlan)
 
 > **BPlan** est une application web complète de gestion de finances personnelles et collaboratives. Elle permet aux utilisateurs de suivre leurs dépenses, de visualiser leurs économies et de gérer des budgets communs en temps réel.
-
-![Bannière ou Logo du projet](public/logo.svg)
 
 ---
 
@@ -34,12 +32,8 @@ L'application est déployée et accessible ici :
 ### 1. Inscription et Vérification
 Créez un compte sécurisé. Un email de confirmation vous sera envoyé pour valider votre identité avant de commencer.
 
-![Page d'inscription](screenshots/register.png)
-
 ### 2. Le Tableau de Bord (Dashboard)
 Votre centre de commande. Visualisez tous vos budgets d'un coup d'œil. Vous pouvez voir les invitations reçues via la cloche de notification.
-
-![Tableau de bord](screenshots/dashboard.png)
 
 ### 3. Gestion d'un Budget
 Cliquez sur un budget pour voir les détails.
@@ -47,17 +41,11 @@ Cliquez sur un budget pour voir les détails.
 * **Colonne Droite :** Ajoutez vos transactions. Le nom de la personne ayant payé s'affiche à côté.
 * **Haut de page :** Visualisez instantanément le solde restant et la répartition des dépenses.
 
-![Détails du budget](screenshots/budget-detail.png)
-
 ### 4. Collaboration
 Invitez un proche en saisissant son email. Il recevra un lien unique pour rejoindre votre budget. Les modifications sont synchronisées en temps réel.
 
-![Menu Collaboration](screenshots/collaboration.png)
-
 ### 5. Profil et Personnalisation
 Changez votre photo de profil, activez le **Mode Sombre** ou changez la couleur principale de l'application selon vos goûts.
-
-![Page Profil et Dark Mode](screenshots/profile.png)
 
 ---
 
@@ -84,7 +72,7 @@ Ce projet est une application **Full Stack** construite avec des technologies mo
 
 ---
 
-## 💻 Installation Locale (Pour les développeurs)
+## 💻 Installation Locale du Backend (Pour les développeurs)
 
 Si vous souhaitez cloner et lancer ce projet sur votre machine :
 
@@ -94,5 +82,5 @@ Si vous souhaitez cloner et lancer ce projet sur votre machine :
 
 ### 1. Cloner le projet
 ```bash
-git clone [https://github.com/VOTRE_NOM/budget-planner.git](https://github.com/VOTRE_NOM/budget-planner.git)
-cd budget-planner
+git clone [https://github.com/VOTRE_NOM/budget-backend.git](https://github.com/VOTRE_NOM/budget-backend.git)
+cd budget-backend
