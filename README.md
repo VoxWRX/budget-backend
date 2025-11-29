@@ -82,29 +82,43 @@ Si vous souhaitez cloner et lancer ce projet sur votre machine :
 
 ### 1. Cloner le projet
 bash
+
 git clone [https://github.com/VOTRE_NOM/budget-backend.git](https://github.com/VOTRE_NOM/budget-backend.git)
 cd budget-backend
 
 ### 2. Configuration Backend
 bash
+
 cd budget-backend
 npm install
 
 Créez un fichier .env à la racine du backend :
 
 PORT=3000
+
 DB_USER=postgres
+
 DB_PASSWORD=votre_mot_de_passe
+
 DB_HOST=localhost
+
 DB_PORT=5432
+
 DB_DATABASE=budget_planner
+
 JWT_SECRET=votre_secret_super_long
+
 RESEND_API_KEY=re_123456...
+
 CLOUDINARY_CLOUD_NAME=...
+
 CLOUDINARY_API_KEY=...
+
 CLOUDINARY_API_SECRET=...
+
 FRONTEND_URL=http://localhost:5173
 
 Lancez le serveur :
 bash
+
 npm run dev
